@@ -1,7 +1,8 @@
 "use server";
 
 import { db } from "@/app/_lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import {
   TransactionCategory,
   TransactionPaymentMethod,
@@ -21,17 +22,47 @@ interface UpsertTransactionParams {
 }
 
 export const upsertTransaction = async (params: UpsertTransactionParams) => {
+  // Validar os parâmetros
   upsertTransactionSchema.parse(params);
-  const { userId } = await auth();
-  if (!userId) {
+
+  // Obter a sessão do usuário usando NextAuth
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user || !session.user.id) {
     throw new Error("Unauthorized");
   }
-  await db.transaction.upsert({
-    update: { ...params, userId },
-    create: { ...params, userId },
+
+  const userId = session.user.id;
+
+  // Inserir ou atualizar a transação
+  const transaction = await db.transaction.upsert({
+    update: {
+      ...params,
+      userId,
+      updateAt: new Date(),
+      type: params.type as TransactionType,
+      category: params.category as TransactionCategory,
+      paymentMethod: params.paymentMethod as TransactionPaymentMethod,
+    },
+    create: {
+      ...params,
+      userId,
+      created: new Date(),
+      type: params.type as TransactionType,
+      category: params.category as TransactionCategory,
+      paymentMethod: params.paymentMethod as TransactionPaymentMethod,
+    },
     where: {
       id: params?.id ?? "",
     },
   });
+
+  // Revalidar o cache da página de transações
   revalidatePath("/transactions");
+
+  // Converter o valor Decimal para string antes de retornar
+  return {
+    ...transaction,
+    amount: transaction.amount.toString(),
+  };
 };
