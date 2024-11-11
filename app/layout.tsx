@@ -1,6 +1,7 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Mulish } from "next/font/google";
-import { SessionProvider } from "next-auth/react";
+import { ClientProvider } from "./clientProvider";
 import "./globals.css";
 
 const mulish = Mulish({
@@ -20,8 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${mulish.className} dark antialiased`}>
-        <SessionProvider>{children}</SessionProvider>{" "}
-        {/* Envolvendo o conteúdo com o SessionProvider */}
+        <ClientProvider>{children}</ClientProvider>
       </body>
     </html>
   );
