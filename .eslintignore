@@ -1,1 +1,2 @@
 tailwind.config.ts
+app/_components/ui/chart.tsx
